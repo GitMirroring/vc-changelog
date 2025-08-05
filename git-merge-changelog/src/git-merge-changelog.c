@@ -14,80 +14,6 @@
    You should have received a copy of the GNU General Public License
    along with this program.  If not, see <https://www.gnu.org/licenses/>.  */
 
-/* README:
-   The default merge driver of 'git' *always* produces conflicts when
-   pulling public modifications into a privately modified ChangeLog file.
-   This is because ChangeLog files are always modified at the top; the
-   default merge driver has no clue how to deal with this. Furthermore
-   the conflicts are presented with more <<<< ==== >>>> markers than
-   necessary; this is because the default merge driver makes pointless
-   efforts to look at the individual line changes inside a ChangeLog entry.
-
-   This program serves as a 'git' merge driver that avoids these problems.
-   1. It produces no conflict when ChangeLog entries have been inserted
-      at the top both in the public and in the private modification. It
-      puts the privately added entries above the publicly added entries.
-   2. It respects the structure of ChangeLog files: entries are not split
-      into lines but kept together.
-   3. It also handles the case of small modifications of past ChangeLog
-      entries, or of removed ChangeLog entries: they are merged as one
-      would expect it.
-   4. Conflicts are presented at the top of the file, rather than where
-      they occurred, so that the user will see them immediately. (Unlike
-      for source code written in some programming language, conflict markers
-      that are located several hundreds lines from the top will not cause
-      any syntax error and therefore would be likely to remain unnoticed.)
- */
-
-/* Installation:
-
-   $ ./gnulib-tool --create-testdir --dir=/tmp/testdir123 git-merge-changelog
-   $ cd /tmp/testdir123
-   $ ./configure
-   $ make
-   $ make install
-
-   Additionally, for git users:
-     - Add to .git/config of the checkout (or to your $HOME/.gitconfig) the
-       lines
-
-          [merge "merge-changelog"]
-                  name = GNU-style ChangeLog merge driver
-                  driver = /usr/local/bin/git-merge-changelog %O %A %B "%Y"
-
-     - Add to the top-level directory of the checkout a file '.gitattributes'
-       with this line:
-
-          ChangeLog    merge=merge-changelog
-
-       (See "man 5 gitattributes" for more info.)
-
-   Additionally, for bzr users:
-     - Install the 'extmerge' bzr plug-in listed at
-         <http://doc.bazaar.canonical.com/plugins/en/index.html>
-         <http://wiki.bazaar.canonical.com/BzrPlugins>
-     - Add to your $HOME/.bazaar/bazaar.conf the line
-
-          external_merge = git-merge-changelog %b %T %o
-
-     - Then, to merge a conflict in a ChangeLog file, use
-
-          $ bzr extmerge ChangeLog
-
-   Additionally, for hg users:
-     - Add to your $HOME/.hgrc the lines
-
-          [merge-patterns]
-          ChangeLog = git-merge-changelog
-
-          [merge-tools]
-          git-merge-changelog.executable = /usr/local/bin/git-merge-changelog
-          git-merge-changelog.args = $base $local $other
-
-       See <https://www.selenic.com/mercurial/hgrc.5.html> section merge-tools
-       for reference.
- */
-
 /* Use as an alternative to 'diff3':
    git-merge-changelog performs the same role as "diff3 -m", just with
    reordered arguments:
@@ -183,6 +109,8 @@
 #include "c-ctype.h"
 #include "c-strstr.h"
 #include "fwriteerror.h"
+#include "progname.h"
+#include "basename-lgpl.h"
 
 /* No internationalization here.  */
 #define _(msgid) msgid
@@ -1057,11 +985,11 @@ usage (int status)
 {
   if (status != EXIT_SUCCESS)
     fprintf (stderr, "Try '%s --help' for more information.\n",
-             getprogname ());
+             program_name);
   else
     {
       printf ("Usage: %s [OPTION] O-FILE-NAME A-FILE-NAME B-FILE-NAME\n",
-              getprogname ());
+              program_name);
       printf ("\n");
       printf ("Merges independent modifications of a ChangeLog style file.\n");
       printf ("O-FILE-NAME names the original file, the ancestor of the two others.\n");
@@ -1084,8 +1012,9 @@ usage (int status)
       printf ("  -h, --help                  display this help and exit\n");
       printf ("  -V, --version               output version information and exit\n");
       printf ("\n");
-      fputs ("Report bugs to <bug-gnulib@gnu.org>.\n",
-             stdout);
+      printf ("Report bugs\nin the bug tracker at <%s>\nor by email to <%s>.\n",
+              "https://savannah.gnu.org/projects/vc-changelog",
+              "bug-vc-changelog@gnu.org");
     }
 
   exit (status);
@@ -1105,6 +1034,9 @@ main (int argc, char *argv[])
   do_version = false;
   debug = false;
   split_merged_entry = true;
+
+  /* Set program name for message texts.  */
+  set_program_name (argv[0]);
 
   /* Parse command line options.  */
   static const struct option long_options[] =
@@ -1138,13 +1070,14 @@ main (int argc, char *argv[])
   if (do_version)
     {
       /* Version information is requested.  */
-      printf ("%s\n", getprogname ());
+      printf ("%s (GNU vc-changelog) %s\n", last_component (program_name),
+              VERSION);
       printf ("Copyright (C) %s Free Software Foundation, Inc.\n\
-License GPLv2+: GNU GPL version 2 or later <https://gnu.org/licenses/gpl.html>\n\
+License GPLv3+: GNU GPL version 3 or later <https://gnu.org/licenses/gpl.html>\n\
 This is free software: you are free to change and redistribute it.\n\
 There is NO WARRANTY, to the extent permitted by law.\n\
 ",
-              "2020");
+              "2025");
       printf ("Written by %s.\n", "Bruno Haible");
       exit (EXIT_SUCCESS);
     }
