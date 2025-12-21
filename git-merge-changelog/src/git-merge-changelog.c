@@ -192,14 +192,11 @@ entry_fstrcmp (const struct entry *entry1, const struct entry *entry2,
                double lower_bound)
 {
   /* fstrcmp works only on NUL terminated strings.  */
-  char *memory;
-  double similarity;
-
   if (memchr (entry1->string, '\0', entry1->length) != NULL)
     return 0.0;
   if (memchr (entry2->string, '\0', entry2->length) != NULL)
     return 0.0;
-  memory = (char *) xmalloca (entry1->length + 1 + entry2->length + 1);
+  char *memory = (char *) xmalloca (entry1->length + 1 + entry2->length + 1);
   {
     char *p = memory;
     memcpy (p, entry1->string, entry1->length);
@@ -209,7 +206,7 @@ entry_fstrcmp (const struct entry *entry1, const struct entry *entry2,
     p += entry2->length;
     *p++ = '\0';
   }
-  similarity =
+  double similarity =
     fstrcmp_bounded (memory, memory + entry1->length + 1, lower_bound);
   freea (memory);
   return similarity;
@@ -260,8 +257,6 @@ read_changelog_file (const char *filename, struct changelog_file *result)
       {
         /* Search the end of the current entry.  */
         char *ptr = start;
-        struct entry *curr;
-
         while (ptr < contents_end)
           {
             ptr = memchr (ptr, '\n', contents_end - ptr);
@@ -280,7 +275,7 @@ read_changelog_file (const char *filename, struct changelog_file *result)
               }
           }
 
-        curr = entry_create (start, ptr - start);
+        struct entry *curr = entry_create (start, ptr - start);
         gl_list_add_last (result->entries_list, curr);
         gl_list_add_first (result->entries_reversed, curr);
 
@@ -330,12 +325,11 @@ entries_mapping_get (struct entries_mapping *mapping, idx_t i)
       idx_t n1 = file1->num_entries;
       idx_t n2 = file2->num_entries;
       struct entry *entry_i = file1->entries[i];
-      idx_t j;
 
       /* Search whether it approximately occurs in file2.  */
       ptrdiff_t best_j = -1;
       double best_j_similarity = 0.0;
-      for (j = n2; j > 0; )
+      for (idx_t j = n2; j > 0; )
         {
           j--;
           if (mapping->index_mapping_reverse[j] < 0)
@@ -356,8 +350,7 @@ entries_mapping_get (struct entries_mapping *mapping, idx_t i)
           /* Search whether it approximately occurs in file1 at index i.  */
           ptrdiff_t best_i = -1;
           double best_i_similarity = 0.0;
-          idx_t ii;
-          for (ii = n1; ii > 0; )
+          for (idx_t ii = n1; ii > 0; )
             {
               ii--;
               if (mapping->index_mapping[ii] < 0)
@@ -399,12 +392,11 @@ entries_mapping_reverse_get (struct entries_mapping *mapping, idx_t j)
       idx_t n1 = file1->num_entries;
       idx_t n2 = file2->num_entries;
       struct entry *entry_j = file2->entries[j];
-      idx_t i;
 
       /* Search whether it approximately occurs in file1.  */
       ptrdiff_t best_i = -1;
       double best_i_similarity = 0.0;
-      for (i = n1; i > 0; )
+      for (idx_t i = n1; i > 0; )
         {
           i--;
           if (mapping->index_mapping[i] < 0)
@@ -425,8 +417,7 @@ entries_mapping_reverse_get (struct entries_mapping *mapping, idx_t j)
           /* Search whether it approximately occurs in file2 at index j.  */
           ptrdiff_t best_j = -1;
           double best_j_similarity = 0.0;
-          idx_t jj;
-          for (jj = n2; jj > 0; )
+          for (idx_t jj = n2; jj > 0; )
             {
               jj--;
               if (mapping->index_mapping_reverse[jj] < 0)
@@ -474,17 +465,16 @@ compute_mapping (struct changelog_file *file1, struct changelog_file *file2,
   ptrdiff_t *index_mapping_reverse;
   idx_t n1 = file1->num_entries;
   idx_t n2 = file2->num_entries;
-  idx_t i, j;
 
   index_mapping = XNMALLOC (n1, ptrdiff_t);
-  for (i = 0; i < n1; i++)
+  for (idx_t i = 0; i < n1; i++)
     index_mapping[i] = -2;
 
   index_mapping_reverse = XNMALLOC (n2, ptrdiff_t);
-  for (j = 0; j < n2; j++)
+  for (idx_t j = 0; j < n2; j++)
     index_mapping_reverse[j] = -2;
 
-  for (i = n1; i > 0; )
+  for (idx_t i = n1; i > 0; )
     {
       i--;
       /* Take an entry from file1.  */
@@ -495,7 +485,7 @@ compute_mapping (struct changelog_file *file1, struct changelog_file *file2,
           size_t jrev = gl_list_indexof (file2->entries_reversed, entry);
           if (jrev != (size_t)(-1))
             {
-              j = n2 - 1 - jrev;
+              idx_t j = n2 - 1 - jrev;
               /* Found an exact correspondence.  */
               /* If index_mapping_reverse[j] >= 0, we have already seen other
                  copies of this entry, and there were more occurrences of it in
@@ -542,7 +532,7 @@ compute_mapping (struct changelog_file *file1, struct changelog_file *file2,
   result->index_mapping_reverse = index_mapping_reverse;
 
   if (full)
-    for (i = n1; i > 0; )
+    for (idx_t i = n1; i > 0; )
       {
         i--;
         entries_mapping_get (result, i);
@@ -616,17 +606,14 @@ compute_differences (struct changelog_file *file1, struct changelog_file *file2,
   struct context ctxt;
   idx_t n1 = file1->num_entries;
   idx_t n2 = file2->num_entries;
-  idx_t i;
-  idx_t j;
-  gl_list_t /* <struct edit *> */ edits;
 
   ctxt.xvec = file1->entries;
   ctxt.yvec = file2->entries;
   ctxt.index_mapping = XNMALLOC (n1, ptrdiff_t);
-  for (i = 0; i < n1; i++)
+  for (idx_t i = 0; i < n1; i++)
     ctxt.index_mapping[i] = 0;
   ctxt.index_mapping_reverse = XNMALLOC (n2, ptrdiff_t);
-  for (j = 0; j < n2; j++)
+  for (idx_t j = 0; j < n2; j++)
     ctxt.index_mapping_reverse[j] = 0;
   ctxt.fdiag = XNMALLOC (2 * (n1 + n2 + 3), ptrdiff_t) + n2 + 1;
   ctxt.bdiag = ctxt.fdiag + n1 + n2 + 3;
@@ -637,110 +624,115 @@ compute_differences (struct changelog_file *file1, struct changelog_file *file2,
   compareseq (0, n1, 0, n2, 0, &ctxt);
 
   /* Complete the index_mapping and index_mapping_reverse arrays.  */
-  i = 0;
-  j = 0;
-  while (i < n1 || j < n2)
-    {
-      while (i < n1 && ctxt.index_mapping[i] < 0)
+  {
+    idx_t i = 0;
+    idx_t j = 0;
+    while (i < n1 || j < n2)
+      {
+        while (i < n1 && ctxt.index_mapping[i] < 0)
+          i++;
+        while (j < n2 && ctxt.index_mapping_reverse[j] < 0)
+          j++;
+        ASSERT ((i < n1) == (j < n2));
+        if (i == n1 && j == n2)
+          break;
+        ctxt.index_mapping[i] = j;
+        ctxt.index_mapping_reverse[j] = i;
         i++;
-      while (j < n2 && ctxt.index_mapping_reverse[j] < 0)
         j++;
-      ASSERT ((i < n1) == (j < n2));
-      if (i == n1 && j == n2)
-        break;
-      ctxt.index_mapping[i] = j;
-      ctxt.index_mapping_reverse[j] = i;
-      i++;
-      j++;
-    }
+      }
+  }
 
   /* Create the edits.  */
-  edits = gl_list_create_empty (GL_ARRAY_LIST, NULL, NULL, NULL, true);
-  i = 0;
-  j = 0;
-  while (i < n1 || j < n2)
-    {
-      if (i == n1)
-        {
-          struct edit *e;
-          ASSERT (j < n2);
-          e = XMALLOC (struct edit);
-          e->type = ADDITION;
-          e->j1 = j;
-          e->j2 = n2 - 1;
-          gl_list_add_last (edits, e);
-          break;
-        }
-      if (j == n2)
-        {
-          struct edit *e;
-          ASSERT (i < n1);
-          e = XMALLOC (struct edit);
-          e->type = REMOVAL;
-          e->i1 = i;
-          e->i2 = n1 - 1;
-          gl_list_add_last (edits, e);
-          break;
-        }
-      if (ctxt.index_mapping[i] >= 0)
-        {
-          if (ctxt.index_mapping_reverse[j] >= 0)
-            {
-              ASSERT (ctxt.index_mapping[i] == j);
-              ASSERT (ctxt.index_mapping_reverse[j] == i);
-              i++;
-              j++;
-            }
-          else
-            {
-              struct edit *e;
-              ASSERT (ctxt.index_mapping_reverse[j] < 0);
-              e = XMALLOC (struct edit);
-              e->type = ADDITION;
-              e->j1 = j;
-              do
-                j++;
-              while (j < n2 && ctxt.index_mapping_reverse[j] < 0);
-              e->j2 = j - 1;
-              gl_list_add_last (edits, e);
-            }
-        }
-      else
-        {
-          if (ctxt.index_mapping_reverse[j] >= 0)
-            {
-              struct edit *e;
-              ASSERT (ctxt.index_mapping[i] < 0);
-              e = XMALLOC (struct edit);
-              e->type = REMOVAL;
-              e->i1 = i;
-              do
+  gl_list_t /* <struct edit *> */ edits =
+    gl_list_create_empty (GL_ARRAY_LIST, NULL, NULL, NULL, true);
+  {
+    idx_t i = 0;
+    idx_t j = 0;
+    while (i < n1 || j < n2)
+      {
+        if (i == n1)
+          {
+            struct edit *e;
+            ASSERT (j < n2);
+            e = XMALLOC (struct edit);
+            e->type = ADDITION;
+            e->j1 = j;
+            e->j2 = n2 - 1;
+            gl_list_add_last (edits, e);
+            break;
+          }
+        if (j == n2)
+          {
+            struct edit *e;
+            ASSERT (i < n1);
+            e = XMALLOC (struct edit);
+            e->type = REMOVAL;
+            e->i1 = i;
+            e->i2 = n1 - 1;
+            gl_list_add_last (edits, e);
+            break;
+          }
+        if (ctxt.index_mapping[i] >= 0)
+          {
+            if (ctxt.index_mapping_reverse[j] >= 0)
+              {
+                ASSERT (ctxt.index_mapping[i] == j);
+                ASSERT (ctxt.index_mapping_reverse[j] == i);
                 i++;
-              while (i < n1 && ctxt.index_mapping[i] < 0);
-              e->i2 = i - 1;
-              gl_list_add_last (edits, e);
-            }
-          else
-            {
-              struct edit *e;
-              ASSERT (ctxt.index_mapping[i] < 0);
-              ASSERT (ctxt.index_mapping_reverse[j] < 0);
-              e = XMALLOC (struct edit);
-              e->type = CHANGE;
-              e->i1 = i;
-              do
-                i++;
-              while (i < n1 && ctxt.index_mapping[i] < 0);
-              e->i2 = i - 1;
-              e->j1 = j;
-              do
                 j++;
-              while (j < n2 && ctxt.index_mapping_reverse[j] < 0);
-              e->j2 = j - 1;
-              gl_list_add_last (edits, e);
-            }
-        }
-    }
+              }
+            else
+              {
+                struct edit *e;
+                ASSERT (ctxt.index_mapping_reverse[j] < 0);
+                e = XMALLOC (struct edit);
+                e->type = ADDITION;
+                e->j1 = j;
+                do
+                  j++;
+                while (j < n2 && ctxt.index_mapping_reverse[j] < 0);
+                e->j2 = j - 1;
+                gl_list_add_last (edits, e);
+              }
+          }
+        else
+          {
+            if (ctxt.index_mapping_reverse[j] >= 0)
+              {
+                struct edit *e;
+                ASSERT (ctxt.index_mapping[i] < 0);
+                e = XMALLOC (struct edit);
+                e->type = REMOVAL;
+                e->i1 = i;
+                do
+                  i++;
+                while (i < n1 && ctxt.index_mapping[i] < 0);
+                e->i2 = i - 1;
+                gl_list_add_last (edits, e);
+              }
+            else
+              {
+                struct edit *e;
+                ASSERT (ctxt.index_mapping[i] < 0);
+                ASSERT (ctxt.index_mapping_reverse[j] < 0);
+                e = XMALLOC (struct edit);
+                e->type = CHANGE;
+                e->i1 = i;
+                do
+                  i++;
+                while (i < n1 && ctxt.index_mapping[i] < 0);
+                e->i2 = i - 1;
+                e->j1 = j;
+                do
+                  j++;
+                while (j < n2 && ctxt.index_mapping_reverse[j] < 0);
+                e->j2 = j - 1;
+                gl_list_add_last (edits, e);
+              }
+          }
+      }
+  }
 
   result->index_mapping = ctxt.index_mapping;
   result->index_mapping_reverse = ctxt.index_mapping_reverse;
@@ -807,46 +799,46 @@ try_split_merged_entry (const struct entry *old_entry,
 {
   idx_t old_title_len = find_paragraph_end (old_entry, 0);
   idx_t new_title_len = find_paragraph_end (new_entry, 0);
-  struct entry old_body;
-  struct entry new_body;
-  idx_t best_split_offset;
-  double best_similarity;
-  idx_t split_offset;
 
   /* Same title? */
   if (!(old_title_len == new_title_len
         && memcmp (old_entry->string, new_entry->string, old_title_len) == 0))
     return false;
 
+  struct entry old_body;
   old_body.string = old_entry->string + old_title_len;
   old_body.length = old_entry->length - old_title_len;
 
   /* Determine where to split the new entry.
      This is done by maximizing the similarity between BODY and BODY'.  */
-  best_split_offset = split_offset = new_title_len;
-  best_similarity = 0.0;
-  for (;;)
-    {
-      double similarity;
+  idx_t best_split_offset;
+  double best_similarity;
+  {
+    idx_t split_offset = new_title_len;
+    best_split_offset = split_offset;
+    best_similarity = 0.0;
+    for (;;)
+      {
+        struct entry new_body;
+        new_body.string = new_entry->string + split_offset;
+        new_body.length = new_entry->length - split_offset;
+        double similarity =
+          entry_fstrcmp (&old_body, &new_body, best_similarity);
+        if (similarity > best_similarity)
+          {
+            best_split_offset = split_offset;
+            best_similarity = similarity;
+          }
+        if (best_similarity == 1.0)
+          /* It cannot get better.  */
+          break;
 
-      new_body.string = new_entry->string + split_offset;
-      new_body.length = new_entry->length - split_offset;
-      similarity =
-        entry_fstrcmp (&old_body, &new_body, best_similarity);
-      if (similarity > best_similarity)
-        {
-          best_split_offset = split_offset;
-          best_similarity = similarity;
-        }
-      if (best_similarity == 1.0)
-        /* It cannot get better.  */
-        break;
-
-      if (split_offset < new_entry->length)
-        split_offset = find_paragraph_end (new_entry, split_offset + 1);
-      else
-        break;
-    }
+        if (split_offset < new_entry->length)
+          split_offset = find_paragraph_end (new_entry, split_offset + 1);
+        else
+          break;
+      }
+  }
 
   /* BODY' should not be empty.  */
   if (best_split_offset == new_entry->length)
@@ -895,8 +887,6 @@ struct conflict
 static void
 conflict_write (FILE *fp, struct conflict *c)
 {
-  idx_t i;
-
   /* Use the same syntax as git's default merge driver.
      The spaces after <<<<<<< and >>>>>>> are for compatibility with
      git/rerere.c, function 'is_cmarker'.  Usually they would be followed by
@@ -904,10 +894,10 @@ conflict_write (FILE *fp, struct conflict *c)
      Don't indent the contents of the entries (with things like ">" or "-"),
      otherwise the user needs more textual editing to resolve the conflict.  */
   fputs ("<<<<<<< \n", fp);
-  for (i = 0; i < c->num_old_entries; i++)
+  for (idx_t i = 0; i < c->num_old_entries; i++)
     entry_write (fp, c->old_entries[i]);
   fputs ("=======\n", fp);
-  for (i = 0; i < c->num_modified_entries; i++)
+  for (idx_t i = 0; i < c->num_modified_entries; i++)
     entry_write (fp, c->modified_entries[i]);
   fputs (">>>>>>> \n", fp);
 }
@@ -919,27 +909,22 @@ static char *
 execute_and_read_line (const char *progname,
                        const char *prog_path, const char * const *prog_argv)
 {
-  pid_t child;
-  int fd[1];
-  FILE *fp;
-  char *line;
-  size_t linesize;
-  size_t linelen;
-
   /* Open a pipe to the program.  */
-  child = create_pipe_in (progname, prog_path, prog_argv, NULL, NULL,
-                          DEV_NULL, false, true, false, fd);
+  int fd[1];
+  pid_t child = create_pipe_in (progname, prog_path, prog_argv, NULL, NULL,
+                                DEV_NULL, false, true, false, fd);
 
   if (child == -1)
     return NULL;
 
   /* Retrieve its result.  */
-  fp = fdopen (fd[0], "r");
+  FILE *fp = fdopen (fd[0], "r");
   if (fp == NULL)
     error (EXIT_FAILURE, errno, _("fdopen() failed"));
 
-  line = NULL; linesize = 0;
-  linelen = getline (&line, &linesize, fp);
+  char *line = NULL;
+  size_t linesize = 0;
+  size_t linelen = getline (&line, &linesize, fp);
   if (linelen == (size_t)(-1))
     {
       error (0, 0, _("%s subprocess I/O error"), progname);
@@ -948,8 +933,6 @@ execute_and_read_line (const char *progname,
     }
   else
     {
-      int exitstatus;
-
       if (linelen > 0 && line[linelen - 1] == '\n')
         line[linelen - 1] = '\0';
 
@@ -960,7 +943,7 @@ execute_and_read_line (const char *progname,
       fclose (fp);
 
       /* Remove zombie process from process list, and retrieve exit status.  */
-      exitstatus =
+      int exitstatus =
         wait_subprocess (child, progname, true, false, true, false, NULL);
       if (exitstatus == 0)
         return line;
@@ -1023,20 +1006,14 @@ usage (int status)
 int
 main (int argc, char *argv[])
 {
-  int optchar;
-  bool do_help;
-  bool do_version;
-  bool debug;
-  bool split_merged_entry;
-
-  /* Set default values for variables.  */
-  do_help = false;
-  do_version = false;
-  debug = false;
-  split_merged_entry = true;
-
   /* Set program name for message texts.  */
   set_program_name (argv[0]);
+
+  /* Default values for command line options.  */
+  bool do_help = false;
+  bool do_version = false;
+  bool debug = false;
+  bool split_merged_entry = true;
 
   /* Parse command line options.  */
   static const struct option long_options[] =
@@ -1047,25 +1024,28 @@ main (int argc, char *argv[])
     { "version", no_argument, NULL, 'V' },
     { NULL, 0, NULL, 0 }
   };
-  while ((optchar = getopt_long (argc, argv, "hV", long_options, NULL)) != EOF)
-    switch (optchar)
-    {
-    case '\0':          /* Long option with flag != NULL.  */
-      break;
-    case 'h':
-      do_help = true;
-      break;
-    case 'V':
-      do_version = true;
-      break;
-    case CHAR_MAX + 1:  /* --split-merged-entry */
-      break;
-    case CHAR_MAX + 2:  /* --debug */
-      debug = true;
-      break;
-    default:
-      usage (EXIT_FAILURE);
-    }
+  {
+    int optchar;
+    while ((optchar = getopt_long (argc, argv, "hV", long_options, NULL)) != EOF)
+      switch (optchar)
+      {
+      case '\0':          /* Long option with flag != NULL.  */
+        break;
+      case 'h':
+        do_help = true;
+        break;
+      case 'V':
+        do_version = true;
+        break;
+      case CHAR_MAX + 1:  /* --split-merged-entry */
+        break;
+      case CHAR_MAX + 2:  /* --debug */
+        debug = true;
+        break;
+      default:
+        usage (EXIT_FAILURE);
+      }
+  }
 
   if (do_version)
     {
@@ -1093,26 +1073,10 @@ There is NO WARRANTY, to the extent permitted by law.\n\
     error (EXIT_FAILURE, 0, "expected three arguments");
 
   {
-    const char *ancestor_file_name; /* O-FILE-NAME */
-    const char *destination_file_name; /* A-FILE-NAME */
-    const char *other_file_name; /* B-FILE-NAME */
-    const char *other_conflict_label; /* %Y */
-    const char *mainstream_file_name;
-    const char *modified_file_name;
-    struct changelog_file ancestor_file;
-    struct changelog_file mainstream_file;
-    struct changelog_file modified_file;
-    /* Mapping from indices in ancestor_file to indices in mainstream_file.  */
-    struct entries_mapping mapping;
-    struct differences diffs;
-    gl_list_node_t *result_entries_pointers; /* array of pointers into result_entries */
-    gl_list_t /* <struct entry *> */ result_entries;
-    gl_list_t /* <struct conflict *> */ result_conflicts;
-
-    ancestor_file_name = argv[optind];
-    destination_file_name = argv[optind + 1];
-    other_file_name = argv[optind + 2];
-    other_conflict_label = argv[optind + 3];
+    const char *ancestor_file_name = argv[optind];        /* O-FILE-NAME */
+    const char *destination_file_name = argv[optind + 1]; /* A-FILE-NAME */
+    const char *other_file_name = argv[optind + 2];       /* B-FILE-NAME */
+    const char *other_conflict_label = argv[optind + 3];  /* %Y */
     if (debug)
       {
         printf ("\n");
@@ -1300,6 +1264,8 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                 : "%A = upstream, %B = modified by user");
       }
 
+    const char *mainstream_file_name;
+    const char *modified_file_name;
     if (downstream)
       {
         mainstream_file_name = other_file_name;
@@ -1312,10 +1278,15 @@ There is NO WARRANTY, to the extent permitted by law.\n\
       }
 
     /* Read the three files into memory.  */
+    struct changelog_file ancestor_file;
     read_changelog_file (ancestor_file_name, &ancestor_file);
+    struct changelog_file mainstream_file;
     read_changelog_file (mainstream_file_name, &mainstream_file);
+    struct changelog_file modified_file;
     read_changelog_file (modified_file_name, &modified_file);
 
+    /* Mapping from indices in ancestor_file to indices in mainstream_file.  */
+    struct entries_mapping mapping;
     /* Compute correspondence between the entries of ancestor_file and of
        mainstream_file.  */
     compute_mapping (&ancestor_file, &mainstream_file, false, &mapping);
@@ -1323,12 +1294,13 @@ There is NO WARRANTY, to the extent permitted by law.\n\
 
     /* Compute differences between the entries of ancestor_file and of
        modified_file.  */
+    struct differences diffs;
     compute_differences (&ancestor_file, &modified_file, &diffs);
 
     /* Compute the result.  */
-    result_entries_pointers =
+    gl_list_node_t *result_entries_pointers = /* array of pointers into result_entries */
       XNMALLOC (mainstream_file.num_entries, gl_list_node_t);
-    result_entries =
+    gl_list_t /* <struct entry *> */ result_entries =
       gl_list_create_empty (GL_LINKED_LIST, entry_equals, entry_hashcode,
                             NULL, true);
     {
@@ -1337,11 +1309,10 @@ There is NO WARRANTY, to the extent permitted by law.\n\
         result_entries_pointers[k] =
           gl_list_add_last (result_entries, mainstream_file.entries[k]);
     }
-    result_conflicts =
+    gl_list_t /* <struct conflict *> */ result_conflicts =
       gl_list_create_empty (GL_ARRAY_LIST, NULL, NULL, NULL, true);
     {
-      idx_t e;
-      for (e = 0; e < diffs.num_edits; e++)
+      for (idx_t e = 0; e < diffs.num_edits; e++)
         {
           struct edit *edit = diffs.edits[e];
           switch (edit->type)
@@ -1351,8 +1322,7 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                 {
                   /* An addition to the top of modified_file.
                      Apply it to the top of mainstream_file.  */
-                  ptrdiff_t j;
-                  for (j = edit->j2; j >= edit->j1; j--)
+                  for (ptrdiff_t j = edit->j2; j >= edit->j1; j--)
                     {
                       struct entry *added_entry = modified_file.entries[j];
                       gl_list_add_first (result_entries, added_entry);
@@ -1360,25 +1330,21 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                 }
               else
                 {
-                  idx_t i_before;
-                  idx_t i_after;
-                  ptrdiff_t k_before;
-                  ptrdiff_t k_after;
-                  i_before = diffs.index_mapping_reverse[edit->j1 - 1];
+                  idx_t i_before = diffs.index_mapping_reverse[edit->j1 - 1];
                   ASSERT (i_before >= 0);
-                  i_after = (edit->j2 + 1 == modified_file.num_entries
-                             ? ancestor_file.num_entries
-                             : diffs.index_mapping_reverse[edit->j2 + 1]);
+                  idx_t i_after = (edit->j2 + 1 == modified_file.num_entries
+                                   ? ancestor_file.num_entries
+                                   : diffs.index_mapping_reverse[edit->j2 + 1]);
                   ASSERT (i_after >= 0);
                   ASSERT (i_after == i_before + 1);
                   /* An addition between ancestor_file.entries[i_before] and
                      ancestor_file.entries[i_after].  See whether these two
                      entries still exist in mainstream_file and are still
                      consecutive.  */
-                  k_before = entries_mapping_get (&mapping, i_before);
-                  k_after = (i_after == ancestor_file.num_entries
-                             ? mainstream_file.num_entries
-                             : entries_mapping_get (&mapping, i_after));
+                  ptrdiff_t k_before = entries_mapping_get (&mapping, i_before);
+                  ptrdiff_t k_after = (i_after == ancestor_file.num_entries
+                                       ? mainstream_file.num_entries
+                                       : entries_mapping_get (&mapping, i_after));
                   if (k_before >= 0 && k_after >= 0 && k_after == k_before + 1)
                     {
                       /* Yes, the entry before and after are still neighbours
@@ -1386,8 +1352,7 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                          them.  */
                       if (k_after == mainstream_file.num_entries)
                         {
-                          idx_t j;
-                          for (j = edit->j1; j <= edit->j2; j++)
+                          for (idx_t j = edit->j1; j <= edit->j2; j++)
                             {
                               struct entry *added_entry = modified_file.entries[j];
                               gl_list_add_last (result_entries, added_entry);
@@ -1396,8 +1361,7 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                       else
                         {
                           gl_list_node_t node_k_after = result_entries_pointers[k_after];
-                          idx_t j;
-                          for (j = edit->j1; j <= edit->j2; j++)
+                          for (idx_t j = edit->j1; j <= edit->j2; j++)
                             {
                               struct entry *added_entry = modified_file.entries[j];
                               gl_list_add_before (result_entries, node_k_after, added_entry);
@@ -1409,13 +1373,12 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                       /* It's not clear where the additions should be applied.
                          Let the user decide.  */
                       struct conflict *c = XMALLOC (struct conflict);
-                      idx_t j;
                       c->num_old_entries = 0;
                       c->old_entries = NULL;
                       c->num_modified_entries = edit->j2 - edit->j1 + 1;
                       c->modified_entries =
                         XNMALLOC (c->num_modified_entries, struct entry *);
-                      for (j = edit->j1; j <= edit->j2; j++)
+                      for (idx_t j = edit->j1; j <= edit->j2; j++)
                         c->modified_entries[j - edit->j1] = modified_file.entries[j];
                       gl_list_add_last (result_conflicts, c);
                     }
@@ -1424,8 +1387,7 @@ There is NO WARRANTY, to the extent permitted by law.\n\
             case REMOVAL:
               {
                 /* Apply the removals one by one.  */
-                idx_t i;
-                for (i = edit->i1; i <= edit->i2; i++)
+                for (idx_t i = edit->i1; i <= edit->i2; i++)
                   {
                     struct entry *removed_entry = ancestor_file.entries[i];
                     ptrdiff_t k = entries_mapping_get (&mapping, i);
@@ -1487,8 +1449,7 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                                                   split);
                         if (simple_merged)
                           {
-                            idx_t i;
-                            for (i = edit->i1 + 1; i <= edit->i2; i++)
+                            for (idx_t i = edit->i1 + 1; i <= edit->i2; i++)
                               if (entry_fstrcmp (ancestor_file.entries[i],
                                                  modified_file.entries[i + edit->j2 - edit->i2],
                                                  FSTRCMP_THRESHOLD)
@@ -1505,18 +1466,17 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                                separately.  */
                             idx_t num_changed = edit->i2 - edit->i1 + 1; /* > 0 */
                             idx_t num_added = (edit->j2 - edit->j1 + 1) - num_changed;
-                            idx_t j;
                             /* First part of the split modified_file.entries[edit->j2 - edit->i2 + edit->i1]:  */
                             gl_list_add_first (result_entries, split[0]);
                             /* The additions.  */
-                            for (j = edit->j1 + num_added; j > edit->j1; )
+                            for (idx_t j = edit->j1 + num_added; j > edit->j1; )
                               {
                                 j--;
                                 struct entry *added_entry = modified_file.entries[j];
                                 gl_list_add_first (result_entries, added_entry);
                               }
                             /* Now the single-entry changes.  */
-                            for (j = edit->j1 + num_added; j <= edit->j2; j++)
+                            for (idx_t j = edit->j1 + num_added; j <= edit->j2; j++)
                               {
                                 struct entry *changed_entry =
                                   (j == edit->j1 + num_added
@@ -1569,9 +1529,8 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                          modified_entry_n.  */
                     if (edit->i2 - edit->i1 <= edit->j2 - edit->j1)
                       {
-                        idx_t i;
                         simple = true;
-                        for (i = edit->i1; i <= edit->i2; i++)
+                        for (idx_t i = edit->i1; i <= edit->i2; i++)
                           if (entry_fstrcmp (ancestor_file.entries[i],
                                              modified_file.entries[i + edit->j2 - edit->i2],
                                              FSTRCMP_THRESHOLD)
@@ -1593,14 +1552,13 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                           {
                             /* A simple change at the top of modified_file.
                                Apply it to the top of mainstream_file.  */
-                            idx_t j;
-                            for (j = edit->j1 + num_added; j > edit->j1; )
+                            for (idx_t j = edit->j1 + num_added; j > edit->j1; )
                               {
                                 j--;
                                 struct entry *added_entry = modified_file.entries[j];
                                 gl_list_add_first (result_entries, added_entry);
                               }
-                            for (j = edit->j1 + num_added; j <= edit->j2; j++)
+                            for (idx_t j = edit->j1 + num_added; j <= edit->j2; j++)
                               {
                                 struct entry *changed_entry = modified_file.entries[j];
                                 idx_t i = j + edit->i2 - edit->j2;
@@ -1615,10 +1573,9 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                                   }
                                 else
                                   {
-                                    struct conflict *c;
                                     ASSERT (!entry_equals (ancestor_file.entries[i],
                                                            changed_entry));
-                                    c = XMALLOC (struct conflict);
+                                    struct conflict *c = XMALLOC (struct conflict);
                                     c->num_old_entries = 1;
                                     c->old_entries =
                                       XNMALLOC (c->num_old_entries, struct entry *);
@@ -1634,21 +1591,17 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                           }
                         else
                           {
-                            idx_t i_before;
-                            ptrdiff_t k_before;
-                            bool linear;
-                            i_before = diffs.index_mapping_reverse[edit->j1 - 1];
+                            idx_t i_before = diffs.index_mapping_reverse[edit->j1 - 1];
                             ASSERT (i_before >= 0);
                             /* A simple change after ancestor_file.entries[i_before].
                                See whether this entry and the following num_changed
                                entries still exist in mainstream_file and are still
                                consecutive.  */
-                            k_before = entries_mapping_get (&mapping, i_before);
-                            linear = (k_before >= 0);
+                            ptrdiff_t k_before = entries_mapping_get (&mapping, i_before);
+                            bool linear = (k_before >= 0);
                             if (linear)
                               {
-                                idx_t i;
-                                for (i = i_before + 1; i <= i_before + num_changed; i++)
+                                for (idx_t i = i_before + 1; i <= i_before + num_changed; i++)
                                   if (entries_mapping_get (&mapping, i) != k_before + (i - i_before))
                                     {
                                       linear = false;
@@ -1659,14 +1612,13 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                               {
                                 gl_list_node_t node_for_insert =
                                   result_entries_pointers[k_before + 1];
-                                idx_t j;
-                                for (j = edit->j1 + num_added; j > edit->j1; )
+                                for (idx_t j = edit->j1 + num_added; j > edit->j1; )
                                   {
                                     j--;
                                     struct entry *added_entry = modified_file.entries[j];
                                     gl_list_add_before (result_entries, node_for_insert, added_entry);
                                   }
-                                for (j = edit->j1 + num_added; j <= edit->j2; j++)
+                                for (idx_t j = edit->j1 + num_added; j <= edit->j2; j++)
                                   {
                                     struct entry *changed_entry = modified_file.entries[j];
                                     idx_t i = j + edit->i2 - edit->j2;
@@ -1681,10 +1633,9 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                                       }
                                     else
                                       {
-                                        struct conflict *c;
                                         ASSERT (!entry_equals (ancestor_file.entries[i],
                                                                changed_entry));
-                                        c = XMALLOC (struct conflict);
+                                        struct conflict *c = XMALLOC (struct conflict);
                                         c->num_old_entries = 1;
                                         c->old_entries =
                                           XNMALLOC (c->num_old_entries, struct entry *);
@@ -1706,19 +1657,15 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                            See whether the num_changed entries still exist
                            unchanged in mainstream_file and are still
                            consecutive.  */
-                        idx_t i_first;
-                        ptrdiff_t k_first;
-                        bool linear_unchanged;
-                        i_first = edit->i1;
-                        k_first = entries_mapping_get (&mapping, i_first);
-                        linear_unchanged =
+                        idx_t i_first = edit->i1;
+                        ptrdiff_t k_first = entries_mapping_get (&mapping, i_first);
+                        bool linear_unchanged =
                           (k_first >= 0
                            && entry_equals (ancestor_file.entries[i_first],
                                             mainstream_file.entries[k_first]));
                         if (linear_unchanged)
                           {
-                            idx_t i;
-                            for (i = i_first + 1; i <= edit->i2; i++)
+                            for (idx_t i = i_first + 1; i <= edit->i2; i++)
                               if (!(entries_mapping_get (&mapping, i) == k_first + (i - i_first)
                                     && entry_equals (ancestor_file.entries[i],
                                                      mainstream_file.entries[entries_mapping_get (&mapping, i)])))
@@ -1731,14 +1678,12 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                           {
                             gl_list_node_t node_for_insert =
                               result_entries_pointers[k_first];
-                            ptrdiff_t j;
-                            idx_t i;
-                            for (j = edit->j2; j >= edit->j1; j--)
+                            for (ptrdiff_t j = edit->j2; j >= edit->j1; j--)
                               {
                                 struct entry *new_entry = modified_file.entries[j];
                                 gl_list_add_before (result_entries, node_for_insert, new_entry);
                               }
-                            for (i = edit->i1; i <= edit->i2; i++)
+                            for (idx_t i = edit->i1; i <= edit->i2; i++)
                               {
                                 idx_t k = entries_mapping_get (&mapping, i);
                                 ASSERT (k >= 0);
@@ -1755,16 +1700,15 @@ There is NO WARRANTY, to the extent permitted by law.\n\
                 if (!done)
                   {
                     struct conflict *c = XMALLOC (struct conflict);
-                    idx_t i, j;
                     c->num_old_entries = edit->i2 - edit->i1 + 1;
                     c->old_entries =
                       XNMALLOC (c->num_old_entries, struct entry *);
-                    for (i = edit->i1; i <= edit->i2; i++)
+                    for (idx_t i = edit->i1; i <= edit->i2; i++)
                       c->old_entries[i - edit->i1] = ancestor_file.entries[i];
                     c->num_modified_entries = edit->j2 - edit->j1 + 1;
                     c->modified_entries =
                       XNMALLOC (c->num_modified_entries, struct entry *);
-                    for (j = edit->j1; j <= edit->j2; j++)
+                    for (idx_t j = edit->j1; j <= edit->j2; j++)
                       c->modified_entries[j - edit->j1] = modified_file.entries[j];
                     gl_list_add_last (result_conflicts, c);
                   }
@@ -1786,8 +1730,7 @@ There is NO WARRANTY, to the extent permitted by law.\n\
       /* Output the conflicts at the top.  */
       {
         idx_t n = gl_list_size (result_conflicts);
-        idx_t i;
-        for (i = 0; i < n; i++)
+        for (idx_t i = 0; i < n; i++)
           conflict_write (fp, (struct conflict *) gl_list_get_at (result_conflicts, i));
       }
       /* Output the modified and unmodified entries, in order.  */
